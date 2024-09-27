@@ -2,19 +2,39 @@
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct TemplateApp {
-    // Example stuff:
-    label: String,
+    tasks: Vec<Task>, // List of tasks
+    selected_task: Option<usize>, // Index of selected task
+    points: u32, // Points earned by completing tasks
 
-    #[serde(skip)] // This how you opt-out of serialization of a field
-    value: f32,
+    // Fields for the new task
+    new_task_name: String, // Name of the new task being created
+    new_task_description: String, // Description of the new task
+    new_task_due_date: String, // Due date of the new task
+    new_task_priority: u8, // Priority of the new task
+    new_task_completed: bool, // Whether the new task is completed
+}
+
+#[derive(serde::Deserialize, serde::Serialize)]
+struct Task {
+    name: String, // Name of the task
+    description: String, // Description of the task
+    due_date: String, // Due date of the task
+    priority: u8, // Priority of the task
+    completed: bool, // Whether the task is completed
 }
 
 impl Default for TemplateApp {
     fn default() -> Self {
         Self {
             // Example stuff:
-            label: "Hello World!".to_owned(),
-            value: 2.7,
+            tasks: Vec::new(),
+            selected_task: None,
+            points: 0,
+            new_task_name: String::new(),
+            new_task_description: String::new(),
+            new_task_due_date: String::new(),
+            new_task_priority: 0,
+            new_task_completed: false,
         }
     }
 }
@@ -67,27 +87,103 @@ impl eframe::App for TemplateApp {
 
         egui::CentralPanel::default().show(ctx, |ui| {
             // The central panel the region left after adding TopPanel's and SidePanel's
-            ui.heading("eframe template");
 
+            ui.heading("Stats");
+            ui.label(format!("Points: {}", self.points));
+            ui.separator();
+
+            ui.heading("Add a Task");
+
+            /**
             ui.horizontal(|ui| {
-                ui.label("Write something: ");
-                ui.text_edit_singleline(&mut self.label);
+                ui.label("Write a task: ");
+                ui.text_edit_singleline(&mut self.new_task);
             });
+            */
 
+            /**
             ui.add(egui::Slider::new(&mut self.value, 0.0..=10.0).text("value"));
             if ui.button("Increment").clicked() {
                 self.value += 1.0;
             }
+            */
+
+            /**
+             * Add a new task.
+             * Fill in information needed for a task (Task name, description, due date, priority, and completed). Add the task to the list of tasks.
+             * Clear the fields for the next task.
+             * Use a button click to add the task.
+             */
+            // update the task with input from the user
+            ui.horizontal(|ui| {
+                ui.label("Task Name: ");
+                ui.text_edit_singleline(&mut self.new_task_name);
+            });
+            ui.horizontal(|ui| {
+                ui.label("Description: ");
+                ui.text_edit_singleline(&mut self.new_task_description);
+            });
+            ui.horizontal(|ui| {
+                ui.label("Due Date: ");
+                ui.text_edit_singleline(&mut self.new_task_due_date);
+            });
+            ui.horizontal(|ui| {
+                ui.label("Priority: ");
+                ui.add(egui::Slider::new(&mut self.new_task_priority, 0..=10));
+            });
+            ui.horizontal(|ui| {
+                ui.checkbox(&mut self.new_task_completed, "Completed");
+            });
+            
+            // add the task to the list of tasks if there is data in all fields
+            if ui.button("Add Task").clicked() {
+                let mut new_task = Task {
+                    name: self.new_task_name.clone(),
+                    description: self.new_task_description.clone(),
+                    due_date: self.new_task_due_date.clone(),
+                    priority: self.new_task_priority,
+                    completed: self.new_task_completed,
+                };
+                if new_task.name.is_empty() || new_task.description.is_empty() || new_task.due_date.is_empty() {
+                    return;
+                }
+                self.tasks.push(new_task);
+                self.new_task_name.clear();
+                self.new_task_description.clear();
+                self.new_task_due_date.clear();
+                self.new_task_priority = 0;
+                self.new_task_completed = false;
+            }
+
 
             ui.separator();
 
+            // Display the list of tasks
+            ui.heading("Tasks");
+            for (i, task) in self.tasks.iter_mut().enumerate() {
+                ui.horizontal(|ui| {
+                    ui.checkbox(&mut task.completed, "");
+                    ui.label(task.name.clone());
+                    if ui.button("View More info").clicked() {
+                        // display more info about the task
+                        self.selected_task = Some(i);
+                    }
+                });
+            }
+
+            ui.separator();
+            //clear all tasks
+            if ui.button("Clear All Tasks").clicked() {
+                self.tasks.clear();
+            }
+
+
             ui.add(egui::github_link_file!(
-                "https://github.com/emilk/eframe_template/blob/main/",
+                "https://github.com/devenallen/TaskHero/eframe_template/",
                 "Source code."
             ));
 
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
-                powered_by_egui_and_eframe(ui);
                 egui::warn_if_debug_build(ui);
             });
         });
